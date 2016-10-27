@@ -22,6 +22,7 @@ import java.util.List;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.database.Cursor;
+import android.media.Image;
 import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -50,7 +51,6 @@ import com.facebook.react.bridge.WritableNativeArray;
 import com.facebook.react.bridge.WritableNativeMap;
 import com.facebook.react.common.ReactConstants;
 import com.facebook.react.module.annotations.ReactModule;
-import android.util.Log;
 
 /**
  * {@link NativeModule} that allows JS to interact with the photos on the device (i.e.
@@ -71,28 +71,22 @@ public class CameraRollManager extends ReactContextBaseJavaModule {
   public static final boolean IS_JELLY_BEAN_OR_LATER =
       Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN;
 
-  private static final String[] PROJECTION;
-  static {
-    if (IS_JELLY_BEAN_OR_LATER) {
-      PROJECTION = new String[] {
+  private static final String[] FILES_PROJECTION = new String[]{
           Files.FileColumns._ID,
-          Files.FileColumns.DATE_ADDED,
+          Images.Media.DATE_TAKEN,
           Files.FileColumns.MIME_TYPE,
           Files.FileColumns.MEDIA_TYPE,
           Files.FileColumns.WIDTH,
           Files.FileColumns.HEIGHT,
-      };
-    } else {
-      PROJECTION = new String[] {
-          Files.FileColumns._ID,
-          Files.FileColumns.DATE_ADDED,
-          Files.FileColumns.MIME_TYPE,
-          Files.FileColumns.MEDIA_TYPE,
-      };
-    }
-  }
+  };
 
-  private static final String SELECTION_DATE_TAKEN = Files.FileColumns.DATE_ADDED + " < ?";
+  private static final String SELECTION_DATE_TAKEN = Images.Media.DATE_TAKEN + " < ?";
+
+  private static final String SELECTION_IS_MEDIA = MediaStore.Files.FileColumns.MEDIA_TYPE + "="
+          + MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE
+          + " OR "
+          + MediaStore.Files.FileColumns.MEDIA_TYPE + "="
+          + MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO;
 
   private static final String SELECTION_IS_MEDIA = MediaStore.Files.FileColumns.MEDIA_TYPE + "="
           + MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE
@@ -224,7 +218,6 @@ public class CameraRollManager extends ReactContextBaseJavaModule {
    */
   @ReactMethod
   public void getPhotos(final ReadableMap params, final Promise promise) {
-    Log.i("GETPHOTOS", "GEETTTING THE PHOTOS");
     int first = params.getInt("first");
     String after = params.hasKey("after") ? params.getString("after") : null;
     String groupName = params.hasKey("groupName") ? params.getString("groupName") : null;
@@ -292,22 +285,27 @@ public class CameraRollManager extends ReactContextBaseJavaModule {
       // setting a limit at all), but it works because this specific ContentProvider is backed by
       // an SQLite DB and forwards parameters to it without doing any parsing / validation.
       try {
-        Uri uri = Files.getContentUri("external");
-        Cursor photos = resolver.query(
-            uri,
-            PROJECTION,
-            selection.toString(),
-            selectionArgs.toArray(new String[selectionArgs.size()]),
-            Files.FileColumns.DATE_ADDED + " DESC, " + Files.FileColumns.DATE_MODIFIED + " DESC LIMIT " +
-                (mFirst + 1)); // set LIMIT to first + 1 so that we know how to populate page_info
-        if (photos == null) {
+        Uri filesContentUri = Files.getContentUri("external");
+        Cursor photosCursor = resolver.query(
+                filesContentUri,
+                FILES_PROJECTION,
+                selection.toString(),
+                selectionArgs.toArray(new String[selectionArgs.size()]),
+                // set LIMIT to first + 1 so that we know how to populate page_info
+                Images.Media.DATE_TAKEN
+                        + " DESC, "
+                        + Files.FileColumns.DATE_MODIFIED
+                        + " DESC LIMIT "
+                        + (mFirst + 1)
+        );
+        if (photosCursor == null) {
           mPromise.reject(ERROR_UNABLE_TO_LOAD, "Could not get photos");
         } else {
           try {
-            putEdges(resolver, photos, response, mFirst);
-            putPageInfo(photos, response, mFirst);
+            putEdges(resolver, photosCursor, response, mFirst);
+            putPageInfo(photosCursor, response, mFirst);
           } finally {
-            photos.close();
+            photosCursor.close();
             mPromise.resolve(response);
           }
         }
@@ -327,7 +325,7 @@ public class CameraRollManager extends ReactContextBaseJavaModule {
       photos.moveToPosition(limit - 1);
       pageInfo.putString(
           "end_cursor",
-          photos.getString(photos.getColumnIndex(Files.FileColumns.DATE_ADDED)));
+          photos.getString(photos.getColumnIndex(Images.Media.DATE_TAKEN)));
     }
     response.putMap("page_info", pageInfo);
   }
@@ -342,7 +340,7 @@ public class CameraRollManager extends ReactContextBaseJavaModule {
     int idIndex = photos.getColumnIndex(Files.FileColumns._ID);
     int mimeTypeIndex = photos.getColumnIndex(Files.FileColumns.MIME_TYPE);
     int mediaTypeIndex = photos.getColumnIndex(Files.FileColumns.MEDIA_TYPE);
-    int dateAddedIndex = photos.getColumnIndex(Files.FileColumns.DATE_ADDED);
+    int dateAddedIndex = photos.getColumnIndex(Images.Media.DATE_TAKEN);
     int widthIndex = IS_JELLY_BEAN_OR_LATER ? photos.getColumnIndex(Files.FileColumns.WIDTH) : -1;
     int heightIndex = IS_JELLY_BEAN_OR_LATER ? photos.getColumnIndex(Files.FileColumns.HEIGHT) : -1;
 

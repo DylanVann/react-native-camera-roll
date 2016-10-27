@@ -94,6 +94,12 @@ public class CameraRollManager extends ReactContextBaseJavaModule {
 
   private static final String SELECTION_DATE_TAKEN = Files.FileColumns.DATE_ADDED + " < ?";
 
+  private static final String SELECTION_IS_MEDIA = MediaStore.Files.FileColumns.MEDIA_TYPE + "="
+          + MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE
+          + " OR "
+          + MediaStore.Files.FileColumns.MEDIA_TYPE + "="
+          + MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO;
+
   public CameraRollManager(ReactApplicationContext reactContext) {
     super(reactContext);
   }
@@ -267,14 +273,11 @@ public class CameraRollManager extends ReactContextBaseJavaModule {
     protected void doInBackgroundGuarded(Void... params) {
       StringBuilder selection = new StringBuilder("1");
       List<String> selectionArgs = new ArrayList<>();
+      selection.append(" AND " + SELECTION_IS_MEDIA);
       if (!TextUtils.isEmpty(mAfter)) {
         selection.append(" AND " + SELECTION_DATE_TAKEN);
         selectionArgs.add(mAfter);
       }
-//      if (!TextUtils.isEmpty(mGroupName)) {
-//        selection.append(" AND " + SELECTION_BUCKET);
-//        selectionArgs.add(mGroupName);
-//      }
       if (mMimeTypes != null && mMimeTypes.size() > 0) {
         selection.append(" AND " + Files.FileColumns.MIME_TYPE + " IN (");
         for (int i = 0; i < mMimeTypes.size(); i++) {
@@ -346,9 +349,11 @@ public class CameraRollManager extends ReactContextBaseJavaModule {
     for (int i = 0; i < limit && !photos.isAfterLast(); i++) {
       WritableMap edge = new WritableNativeMap();
       WritableMap node = new WritableNativeMap();
+      boolean isVideo = photos.getInt(mediaTypeIndex) == Files.FileColumns.MEDIA_TYPE_VIDEO;
+      boolean isPhoto = photos.getInt(mediaTypeIndex) == Files.FileColumns.MEDIA_TYPE_IMAGE;
       boolean imageInfoSuccess =
           putImageInfo(resolver, photos, node, mediaTypeIndex, idIndex, widthIndex, heightIndex);
-      if (imageInfoSuccess) {
+      if ((isPhoto || isVideo) && imageInfoSuccess) {
         putBasicNodeInfo(photos, node, mimeTypeIndex, 0, dateAddedIndex);
         edge.putMap("node", node);
         edges.pushMap(edge);
@@ -385,28 +390,38 @@ public class CameraRollManager extends ReactContextBaseJavaModule {
 
     boolean isVideo = photos.getInt(mediaTypeIndex) == Files.FileColumns.MEDIA_TYPE_VIDEO;
     if (isVideo) {
-      long videoId = photos.getLong(idIndex);
-      MediaStore.Video.Thumbnails.getThumbnail(
-              resolver,
-              videoId,
-              MediaStore.Video.Thumbnails.MINI_KIND,
-              null);
-      String[] projection = {
-              MediaStore.Video.Thumbnails.DATA,
-      };
-      Cursor cursor = resolver.query(
-              MediaStore.Video.Thumbnails.EXTERNAL_CONTENT_URI,
-              projection,
-              MediaStore.Video.Thumbnails.VIDEO_ID + "=?",
-              new String[] { String.valueOf(videoId) },
-              null);
-      cursor.moveToFirst();
-      String uri = cursor.getString(0);
-      image.putString("uri", "file://" + uri);
+      // Add the actual source of the video as a property.
       Uri sourceUri = Uri.withAppendedPath(
               Video.Media.EXTERNAL_CONTENT_URI,
               photos.getString(idIndex));
       image.putString("source", sourceUri.toString());
+
+      long videoId = photos.getLong(idIndex);
+      // Attempt to trigger the MediaScanner to generate the thumbnail before
+      // we try to get its uri.
+      MediaStore.Video.Thumbnails.getThumbnail(
+              resolver,
+              videoId,
+              Video.Thumbnails.MINI_KIND,
+              null);
+      String[] projection = {
+              Video.Thumbnails.DATA,
+      };
+      // Get the thumbnail info for this video id.
+      Cursor cursor = resolver.query(
+              Video.Thumbnails.EXTERNAL_CONTENT_URI,
+              projection,
+              Video.Thumbnails.VIDEO_ID + "=?",
+              new String[] { String.valueOf(videoId) },
+              null);
+      boolean hasThumb = cursor != null && cursor.moveToFirst();
+      // If there is no thumbnail then the media will be returned, but with no uri.
+      if (hasThumb) {
+        int pathIndex = cursor.getColumnIndex(Video.Thumbnails.DATA);
+        String uri = cursor.getString(pathIndex);
+        // Return a url with file:///storage for React Native to use.
+        image.putString("uri", "file://" + uri);
+      }
     } else {
       Uri photoUri = Uri.withAppendedPath(
               Images.Media.EXTERNAL_CONTENT_URI,

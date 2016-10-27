@@ -1,0 +1,17 @@
+{
+  "name": "react-native-camera-roll",
+  "version": "0.0.1",
+  "description": "Camera Roll for react native.",
+  "keywords": [
+    "camera",
+    "camera-roll",
+    "react",
+    "react-native"
+  ],
+  "license": "MIT",
+  "author": "Dylan Vann <dylanvann@gmail.com> (http://dylanvann.com)",
+  "main": "main.js",
+  "peerDependencies": {
+    "react-native": ">=v0.35.0"
+  }
+}

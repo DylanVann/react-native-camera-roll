@@ -22,7 +22,6 @@ import java.util.List;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.database.Cursor;
-import android.media.Image;
 import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -30,6 +29,7 @@ import android.os.Build;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.provider.MediaStore.Files;
+import android.provider.MediaStore.Files.FileColumns;
 import android.provider.MediaStore.Images;
 import android.provider.MediaStore.Video;
 import android.text.TextUtils;
@@ -72,21 +72,23 @@ public class CameraRollManager extends ReactContextBaseJavaModule {
       Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN;
 
   private static final String[] FILES_PROJECTION = new String[]{
-          Files.FileColumns._ID,
-          Images.Media.DATE_TAKEN,
-          Files.FileColumns.MIME_TYPE,
-          Files.FileColumns.MEDIA_TYPE,
-          Files.FileColumns.WIDTH,
-          Files.FileColumns.HEIGHT,
+          FileColumns._ID,
+          FileColumns.DATE_MODIFIED,
+          FileColumns.MIME_TYPE,
+          FileColumns.MEDIA_TYPE,
+          FileColumns.WIDTH,
+          FileColumns.HEIGHT,
   };
 
-  private static final String SELECTION_DATE_TAKEN = Images.Media.DATE_TAKEN + " < ?";
+  private static final String SELECTION_DATE_MODIFIED = FileColumns.DATE_MODIFIED + " < ?";
 
-  private static final String SELECTION_IS_MEDIA = MediaStore.Files.FileColumns.MEDIA_TYPE + "="
-          + MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE
+  private static final String SELECTION_IS_MEDIA = "(" + FileColumns.MEDIA_TYPE + "="
+          + FileColumns.MEDIA_TYPE_IMAGE
           + " OR "
-          + MediaStore.Files.FileColumns.MEDIA_TYPE + "="
-          + MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO;
+          + FileColumns.MEDIA_TYPE
+          + "="
+          + FileColumns.MEDIA_TYPE_VIDEO
+          + ")";
 
   public CameraRollManager(ReactApplicationContext reactContext) {
     super(reactContext);
@@ -262,11 +264,11 @@ public class CameraRollManager extends ReactContextBaseJavaModule {
       List<String> selectionArgs = new ArrayList<>();
       selection.append(" AND " + SELECTION_IS_MEDIA);
       if (!TextUtils.isEmpty(mAfter)) {
-        selection.append(" AND " + SELECTION_DATE_TAKEN);
+        selection.append(" AND " + SELECTION_DATE_MODIFIED);
         selectionArgs.add(mAfter);
       }
       if (mMimeTypes != null && mMimeTypes.size() > 0) {
-        selection.append(" AND " + Files.FileColumns.MIME_TYPE + " IN (");
+        selection.append(" AND " + FileColumns.MIME_TYPE + " IN (");
         for (int i = 0; i < mMimeTypes.size(); i++) {
           selection.append("?,");
           selectionArgs.add(mMimeTypes.getString(i));
@@ -286,9 +288,9 @@ public class CameraRollManager extends ReactContextBaseJavaModule {
                 selection.toString(),
                 selectionArgs.toArray(new String[selectionArgs.size()]),
                 // set LIMIT to first + 1 so that we know how to populate page_info
-                Images.Media.DATE_TAKEN
+                FileColumns.DATE_MODIFIED
                         + " DESC, "
-                        + Files.FileColumns.DATE_MODIFIED
+                        + FileColumns.DATE_MODIFIED
                         + " DESC LIMIT "
                         + (mFirst + 1)
         );
@@ -319,7 +321,7 @@ public class CameraRollManager extends ReactContextBaseJavaModule {
       photos.moveToPosition(limit - 1);
       pageInfo.putString(
           "end_cursor",
-          photos.getString(photos.getColumnIndex(Images.Media.DATE_TAKEN)));
+          photos.getString(photos.getColumnIndex(FileColumns.DATE_MODIFIED)));
     }
     response.putMap("page_info", pageInfo);
   }
@@ -331,18 +333,18 @@ public class CameraRollManager extends ReactContextBaseJavaModule {
       int limit) {
     WritableArray edges = new WritableNativeArray();
     photos.moveToFirst();
-    int idIndex = photos.getColumnIndex(Files.FileColumns._ID);
-    int mimeTypeIndex = photos.getColumnIndex(Files.FileColumns.MIME_TYPE);
-    int mediaTypeIndex = photos.getColumnIndex(Files.FileColumns.MEDIA_TYPE);
-    int dateAddedIndex = photos.getColumnIndex(Images.Media.DATE_TAKEN);
-    int widthIndex = IS_JELLY_BEAN_OR_LATER ? photos.getColumnIndex(Files.FileColumns.WIDTH) : -1;
-    int heightIndex = IS_JELLY_BEAN_OR_LATER ? photos.getColumnIndex(Files.FileColumns.HEIGHT) : -1;
+    int idIndex = photos.getColumnIndex(FileColumns._ID);
+    int mimeTypeIndex = photos.getColumnIndex(FileColumns.MIME_TYPE);
+    int mediaTypeIndex = photos.getColumnIndex(FileColumns.MEDIA_TYPE);
+    int dateAddedIndex = photos.getColumnIndex(FileColumns.DATE_MODIFIED);
+    int widthIndex = IS_JELLY_BEAN_OR_LATER ? photos.getColumnIndex(FileColumns.WIDTH) : -1;
+    int heightIndex = IS_JELLY_BEAN_OR_LATER ? photos.getColumnIndex(FileColumns.HEIGHT) : -1;
 
     for (int i = 0; i < limit && !photos.isAfterLast(); i++) {
       WritableMap edge = new WritableNativeMap();
       WritableMap node = new WritableNativeMap();
-      boolean isVideo = photos.getInt(mediaTypeIndex) == Files.FileColumns.MEDIA_TYPE_VIDEO;
-      boolean isPhoto = photos.getInt(mediaTypeIndex) == Files.FileColumns.MEDIA_TYPE_IMAGE;
+      boolean isVideo = photos.getInt(mediaTypeIndex) == FileColumns.MEDIA_TYPE_VIDEO;
+      boolean isPhoto = photos.getInt(mediaTypeIndex) == FileColumns.MEDIA_TYPE_IMAGE;
       boolean imageInfoSuccess =
           putImageInfo(resolver, photos, node, mediaTypeIndex, idIndex, widthIndex, heightIndex);
       if ((isPhoto || isVideo) && imageInfoSuccess) {
@@ -367,7 +369,7 @@ public class CameraRollManager extends ReactContextBaseJavaModule {
       int dateAddedIndex) {
     node.putString("type", photos.getString(mimeTypeIndex));
     node.putString("group_name", photos.getString(groupNameIndex));
-    node.putDouble("timestamp", photos.getLong(dateAddedIndex) / 1000d);
+    node.putDouble("timestamp", photos.getLong(dateAddedIndex));
   }
 
   private static boolean putImageInfo(
@@ -380,7 +382,7 @@ public class CameraRollManager extends ReactContextBaseJavaModule {
       int heightIndex) {
     WritableMap image = new WritableNativeMap();
 
-    boolean isVideo = photos.getInt(mediaTypeIndex) == Files.FileColumns.MEDIA_TYPE_VIDEO;
+    boolean isVideo = photos.getInt(mediaTypeIndex) == FileColumns.MEDIA_TYPE_VIDEO;
     if (isVideo) {
       // Add the actual source of the video as a property.
       Uri sourceUri = Uri.withAppendedPath(
@@ -400,19 +402,20 @@ public class CameraRollManager extends ReactContextBaseJavaModule {
               Video.Thumbnails.DATA,
       };
       // Get the thumbnail info for this video id.
-      Cursor cursor = resolver.query(
+      Cursor videoThumbnailCursor = resolver.query(
               Video.Thumbnails.EXTERNAL_CONTENT_URI,
               projection,
               Video.Thumbnails.VIDEO_ID + "=?",
               new String[] { String.valueOf(videoId) },
               null);
-      boolean hasThumb = cursor != null && cursor.moveToFirst();
+      boolean hasThumb = videoThumbnailCursor != null && videoThumbnailCursor.moveToFirst();
       // If there is no thumbnail then the media will be returned, but with no uri.
       if (hasThumb) {
-        int pathIndex = cursor.getColumnIndex(Video.Thumbnails.DATA);
-        String uri = cursor.getString(pathIndex);
+        int pathIndex = videoThumbnailCursor.getColumnIndex(Video.Thumbnails.DATA);
+        String uri = videoThumbnailCursor.getString(pathIndex);
         // Return a url with file:///storage for React Native to use.
         image.putString("uri", "file://" + uri);
+        videoThumbnailCursor.close();
       }
     } else {
       Uri photoUri = Uri.withAppendedPath(

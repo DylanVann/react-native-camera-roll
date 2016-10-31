@@ -88,12 +88,6 @@ public class CameraRollManager extends ReactContextBaseJavaModule {
           + MediaStore.Files.FileColumns.MEDIA_TYPE + "="
           + MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO;
 
-  private static final String SELECTION_IS_MEDIA = MediaStore.Files.FileColumns.MEDIA_TYPE + "="
-          + MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE
-          + " OR "
-          + MediaStore.Files.FileColumns.MEDIA_TYPE + "="
-          + MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO;
-
   public CameraRollManager(ReactApplicationContext reactContext) {
     super(reactContext);
   }

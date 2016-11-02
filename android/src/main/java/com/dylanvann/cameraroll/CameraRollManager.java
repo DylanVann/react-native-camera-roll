@@ -392,7 +392,6 @@ public class CameraRollManager extends ReactContextBaseJavaModule {
               photos.getString(idIndex));
       image.putString("source", sourceUri.toString());
       image.putString("duration", photos.getString(photos.getColumnIndex(Video.VideoColumns.DURATION)));
-      image.putString("filename", photos.getString(photos.getColumnIndex(MediaStore.MediaColumns.DISPLAY_NAME)));
 
       long videoId = photos.getLong(idIndex);
       // Attempt to trigger the MediaScanner to generate the thumbnail before
@@ -436,6 +435,7 @@ public class CameraRollManager extends ReactContextBaseJavaModule {
     }
     image.putDouble("width", width);
     image.putDouble("height", height);
+    image.putString("filename", photos.getString(photos.getColumnIndex(MediaStore.MediaColumns.DISPLAY_NAME)));
     node.putMap("image", image);
     return true;
   }

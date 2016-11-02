@@ -427,12 +427,8 @@ public class CameraRollManager extends ReactContextBaseJavaModule {
       image.putString("uri", photoUri.toString());
     }
 
-    float width = -1;
-    float height = -1;
-    if (IS_JELLY_BEAN_OR_LATER) {
-      width = photos.getInt(widthIndex);
-      height = photos.getInt(heightIndex);
-    }
+    float width = photos.getInt(widthIndex);
+    float height = photos.getInt(heightIndex);
     image.putDouble("width", width);
     image.putDouble("height", height);
     image.putString("filename", photos.getString(photos.getColumnIndex(MediaStore.MediaColumns.DISPLAY_NAME)));

@@ -17,6 +17,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 
 import android.content.ContentResolver;
@@ -80,8 +82,11 @@ public class CameraRollManager extends ReactContextBaseJavaModule {
           FileColumns.HEIGHT,
           Video.VideoColumns.DURATION,
           MediaStore.MediaColumns.DISPLAY_NAME,
+          Video.Media.BUCKET_ID,
+          Video.Media.BUCKET_DISPLAY_NAME,
   };
 
+  private static final String SELECTION_BUCKET = Images.Media.BUCKET_ID + " = ?";
   private static final String SELECTION_DATE_MODIFIED = FileColumns.DATE_MODIFIED + " < ?";
 
   private static final String SELECTION_IS_MEDIA = "(" + FileColumns.MEDIA_TYPE + "="
@@ -195,6 +200,139 @@ public class CameraRollManager extends ReactContextBaseJavaModule {
     }
   }
 
+  @ReactMethod
+  public void getAlbums(final ReadableMap params, final Promise promise) {
+    new GetAlbumsTask(
+            getReactApplicationContext(),
+            promise)
+            .executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+  }
+
+  private static class GetAlbumsTask extends GuardedAsyncTask<Void, Void> {
+    private final Context mContext;
+    private final Promise mPromise;
+
+    private GetAlbumsTask(
+            ReactContext context,
+            Promise promise) {
+      super(context);
+      mContext = context;
+      mPromise = promise;
+    }
+
+    @Override
+    protected void doInBackgroundGuarded(Void... params) {
+      StringBuilder selection = new StringBuilder("1");
+      List<String> selectionArgs = new ArrayList<>();
+      selection.append(" AND " + SELECTION_IS_MEDIA);
+      WritableMap response = new WritableNativeMap();
+      ContentResolver resolver = mContext.getContentResolver();
+      try {
+        Uri filesContentUri = Files.getContentUri("external");
+        Cursor photosCursor = resolver.query(
+                filesContentUri,
+                FILES_PROJECTION,
+                selection.toString(),
+                selectionArgs.toArray(new String[selectionArgs.size()]),
+                FileColumns.DATE_MODIFIED
+                        + " DESC, "
+                        + FileColumns.DATE_MODIFIED
+        );
+        if (photosCursor == null) {
+          mPromise.reject(ERROR_UNABLE_TO_LOAD, "Could not get photos");
+        } else {
+          try {
+            putAlbums(resolver, photosCursor, response);
+          } finally {
+            photosCursor.close();
+            mPromise.resolve(response);
+          }
+        }
+      } catch (SecurityException e) {
+        mPromise.reject(
+                ERROR_UNABLE_TO_LOAD_PERMISSION,
+                "Could not get photos: need READ_EXTERNAL_STORAGE permission",
+                e);
+      }
+    }
+  }
+
+  private static void putAlbums(
+          ContentResolver resolver,
+          Cursor cursor,
+          WritableMap response) {
+    WritableArray albums = new WritableNativeArray();
+    int bucketIdIndex = cursor.getColumnIndex(Video.VideoColumns.BUCKET_ID);
+    int bucketNameIndex = cursor.getColumnIndex(Video.VideoColumns.BUCKET_DISPLAY_NAME);
+    int idIndex = cursor.getColumnIndex(FileColumns._ID);
+    int mimeTypeIndex = cursor.getColumnIndex(FileColumns.MIME_TYPE);
+    int mediaTypeIndex = cursor.getColumnIndex(FileColumns.MEDIA_TYPE);
+    int dateModifiedIndex = cursor.getColumnIndex(FileColumns.DATE_MODIFIED);
+    int widthIndex = IS_JELLY_BEAN_OR_LATER ? cursor.getColumnIndex(FileColumns.WIDTH) : -1;
+    int heightIndex = IS_JELLY_BEAN_OR_LATER ? cursor.getColumnIndex(FileColumns.HEIGHT) : -1;
+    HashMap<String, WritableMap> albumsMap = new HashMap<>();
+    String assetCountKey = "assetCount";
+    if (cursor.moveToFirst()) {
+      {
+        WritableMap album = new WritableNativeMap();
+        album.putInt(assetCountKey, cursor.getCount());
+        WritableArray previewAssets = new WritableNativeArray();
+        WritableMap asset = new WritableNativeMap();
+        putAssetInfo(
+                resolver,
+                cursor,
+                asset,
+                mediaTypeIndex,
+                idIndex,
+                widthIndex,
+                heightIndex,
+                mimeTypeIndex,
+                dateModifiedIndex
+        );
+        previewAssets.pushMap(asset);
+        album.putArray("previewAssets", previewAssets);
+        albumsMap.put("-1", album);
+      }
+
+      while (cursor.moveToNext()) {
+        String albumId = cursor.getString(bucketIdIndex);
+        if (!albumsMap.containsKey(albumId)) {
+          WritableMap album = new WritableNativeMap();
+          String albumName = cursor.getString(bucketNameIndex);
+          album.putString("id", albumId);
+          album.putString("title", albumName);
+          album.putInt(assetCountKey, 1);
+          WritableArray previewAssets = new WritableNativeArray();
+          WritableMap asset = new WritableNativeMap();
+          putAssetInfo(
+                  resolver,
+                  cursor,
+                  asset,
+                  mediaTypeIndex,
+                  idIndex,
+                  widthIndex,
+                  heightIndex,
+                  mimeTypeIndex,
+                  dateModifiedIndex
+          );
+          previewAssets.pushMap(asset);
+          album.putArray("previewAssets", previewAssets);
+          albumsMap.put(albumId, album);
+        } else {
+          WritableMap album = albumsMap.get(albumId);
+          int count = album.getInt(assetCountKey);
+          album.putInt(assetCountKey, count + 1);
+        }
+      }
+      Collection<WritableMap> albumsCollection = albumsMap.values();
+      for (WritableMap album : albumsCollection) {
+        albums.pushMap(album);
+      }
+    }
+    response.putArray("albums", albums);
+  }
+
+
   /**
    * Get photos from {@link MediaStore.Images}, most recent first.
    *
@@ -218,7 +356,7 @@ public class CameraRollManager extends ReactContextBaseJavaModule {
   public void getPhotos(final ReadableMap params, final Promise promise) {
     int first = params.getInt("first");
     String after = params.hasKey("after") ? params.getString("after") : null;
-    String groupName = params.hasKey("groupName") ? params.getString("groupName") : null;
+    String albumId = params.hasKey("albumId") ? params.getString("albumId") : null;
     ReadableArray mimeTypes = params.hasKey("mimeTypes")
         ? params.getArray("mimeTypes")
         : null;
@@ -230,7 +368,7 @@ public class CameraRollManager extends ReactContextBaseJavaModule {
           getReactApplicationContext(),
           first,
           after,
-          groupName,
+          albumId,
           mimeTypes,
           promise)
           .executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
@@ -240,7 +378,7 @@ public class CameraRollManager extends ReactContextBaseJavaModule {
     private final Context mContext;
     private final int mFirst;
     private final @Nullable String mAfter;
-    private final @Nullable String mGroupName;
+    private final @Nullable String mAlbumId;
     private final @Nullable ReadableArray mMimeTypes;
     private final Promise mPromise;
 
@@ -248,14 +386,14 @@ public class CameraRollManager extends ReactContextBaseJavaModule {
         ReactContext context,
         int first,
         @Nullable String after,
-        @Nullable String groupName,
+        @Nullable String albumId,
         @Nullable ReadableArray mimeTypes,
         Promise promise) {
       super(context);
       mContext = context;
       mFirst = first;
       mAfter = after;
-      mGroupName = groupName;
+      mAlbumId = albumId;
       mMimeTypes = mimeTypes;
       mPromise = promise;
     }
@@ -268,6 +406,10 @@ public class CameraRollManager extends ReactContextBaseJavaModule {
       if (!TextUtils.isEmpty(mAfter)) {
         selection.append(" AND " + SELECTION_DATE_MODIFIED);
         selectionArgs.add(mAfter);
+      }
+      if (!TextUtils.isEmpty(mAlbumId)) {
+        selection.append(" AND " + SELECTION_BUCKET);
+        selectionArgs.add(mAlbumId);
       }
       if (mMimeTypes != null && mMimeTypes.size() > 0) {
         selection.append(" AND " + FileColumns.MIME_TYPE + " IN (");
@@ -300,7 +442,7 @@ public class CameraRollManager extends ReactContextBaseJavaModule {
           mPromise.reject(ERROR_UNABLE_TO_LOAD, "Could not get photos");
         } else {
           try {
-            putEdges(resolver, photosCursor, response, mFirst);
+            putAssets(resolver, photosCursor, response, mFirst);
             putPageInfo(photosCursor, response, mFirst);
           } finally {
             photosCursor.close();
@@ -328,31 +470,35 @@ public class CameraRollManager extends ReactContextBaseJavaModule {
     response.putMap("page_info", pageInfo);
   }
 
-  private static void putEdges(
+  private static void putAssets(
       ContentResolver resolver,
       Cursor photos,
       WritableMap response,
       int limit) {
-    WritableArray edges = new WritableNativeArray();
+    WritableArray assets = new WritableNativeArray();
     photos.moveToFirst();
     int idIndex = photos.getColumnIndex(FileColumns._ID);
     int mimeTypeIndex = photos.getColumnIndex(FileColumns.MIME_TYPE);
     int mediaTypeIndex = photos.getColumnIndex(FileColumns.MEDIA_TYPE);
-    int dateAddedIndex = photos.getColumnIndex(FileColumns.DATE_MODIFIED);
+    int dateModifiedIndex = photos.getColumnIndex(FileColumns.DATE_MODIFIED);
     int widthIndex = IS_JELLY_BEAN_OR_LATER ? photos.getColumnIndex(FileColumns.WIDTH) : -1;
     int heightIndex = IS_JELLY_BEAN_OR_LATER ? photos.getColumnIndex(FileColumns.HEIGHT) : -1;
 
     for (int i = 0; i < limit && !photos.isAfterLast(); i++) {
-      WritableMap edge = new WritableNativeMap();
-      WritableMap node = new WritableNativeMap();
-      boolean isVideo = photos.getInt(mediaTypeIndex) == FileColumns.MEDIA_TYPE_VIDEO;
-      boolean isPhoto = photos.getInt(mediaTypeIndex) == FileColumns.MEDIA_TYPE_IMAGE;
-      boolean imageInfoSuccess =
-          putImageInfo(resolver, photos, node, mediaTypeIndex, idIndex, widthIndex, heightIndex);
-      if ((isPhoto || isVideo) && imageInfoSuccess) {
-        putBasicNodeInfo(photos, node, mimeTypeIndex, 0, dateAddedIndex);
-        edge.putMap("node", node);
-        edges.pushMap(edge);
+      WritableMap asset = new WritableNativeMap();
+      boolean imageInfoSuccess = putAssetInfo(
+              resolver,
+              photos,
+              asset,
+              mediaTypeIndex,
+              idIndex,
+              widthIndex,
+              heightIndex,
+              mimeTypeIndex,
+              dateModifiedIndex
+      );
+      if (imageInfoSuccess) {
+        assets.pushMap(asset);
       } else {
         // we skipped an image because we couldn't get its details (e.g. width/height), so we
         // decrement i in order to correctly reach the limit, if the cursor has enough rows
@@ -360,38 +506,28 @@ public class CameraRollManager extends ReactContextBaseJavaModule {
       }
       photos.moveToNext();
     }
-    response.putArray("edges", edges);
+    response.putArray("assets", assets);
   }
 
-  private static void putBasicNodeInfo(
-      Cursor photos,
-      WritableMap node,
-      int mimeTypeIndex,
-      int groupNameIndex,
-      int dateAddedIndex) {
-    node.putString("type", photos.getString(mimeTypeIndex));
-    node.putString("group_name", photos.getString(groupNameIndex));
-    node.putDouble("timestamp", photos.getLong(dateAddedIndex));
-  }
-
-  private static boolean putImageInfo(
+  private static boolean putAssetInfo(
       ContentResolver resolver,
       Cursor photos,
-      WritableMap node,
+      WritableMap asset,
       int mediaTypeIndex,
       int idIndex,
       int widthIndex,
-      int heightIndex) {
-    WritableMap image = new WritableNativeMap();
-
+      int heightIndex,
+      int mimeTypeIndex,
+      int dateAddedIndex
+  ) {
     boolean isVideo = photos.getInt(mediaTypeIndex) == FileColumns.MEDIA_TYPE_VIDEO;
     if (isVideo) {
       // Add the actual source of the video as a property.
       Uri sourceUri = Uri.withAppendedPath(
               Video.Media.EXTERNAL_CONTENT_URI,
               photos.getString(idIndex));
-      image.putString("source", sourceUri.toString());
-      image.putString("duration", photos.getString(photos.getColumnIndex(Video.VideoColumns.DURATION)));
+      asset.putString("source", sourceUri.toString());
+      asset.putString("duration", photos.getString(photos.getColumnIndex(Video.VideoColumns.DURATION)));
 
       long videoId = photos.getLong(idIndex);
       // Attempt to trigger the MediaScanner to generate the thumbnail before
@@ -417,22 +553,26 @@ public class CameraRollManager extends ReactContextBaseJavaModule {
         int pathIndex = videoThumbnailCursor.getColumnIndex(Video.Thumbnails.DATA);
         String uri = videoThumbnailCursor.getString(pathIndex);
         // Return a url with file:///storage for React Native to use.
-        image.putString("uri", "file://" + uri);
+        asset.putString("uri", "file://" + uri);
         videoThumbnailCursor.close();
       }
     } else {
       Uri photoUri = Uri.withAppendedPath(
               Images.Media.EXTERNAL_CONTENT_URI,
               photos.getString(idIndex));
-      image.putString("uri", photoUri.toString());
+      asset.putString("uri", photoUri.toString());
     }
 
     float width = photos.getInt(widthIndex);
     float height = photos.getInt(heightIndex);
-    image.putDouble("width", width);
-    image.putDouble("height", height);
-    image.putString("filename", photos.getString(photos.getColumnIndex(MediaStore.MediaColumns.DISPLAY_NAME)));
-    node.putMap("image", image);
+    String mediaType = isVideo ? "video" : "photo";
+    asset.putDouble("width", width);
+    asset.putDouble("height", height);
+    asset.putString("filename", photos.getString(photos.getColumnIndex(MediaStore.MediaColumns.DISPLAY_NAME)));
+    asset.putString("mimeType", photos.getString(mimeTypeIndex));
+    asset.putString("mediaType", mediaType);
+    asset.putDouble("creationDate", photos.getLong(dateAddedIndex));
+    asset.putString("id", photos.getString(idIndex));
     return true;
   }
 }

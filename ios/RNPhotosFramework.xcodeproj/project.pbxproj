@@ -229,7 +229,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
@@ -270,7 +270,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = iphoneos;
 				VALIDATE_PRODUCT = YES;
@@ -282,8 +282,6 @@
 			buildSettings = {
 				DEVELOPMENT_TEAM = 5BEG6QJ94B;
 				HEADER_SEARCH_PATHS = (
-					"$(SRCROOT)/../../gotlandskartan/app/node_modules/react-native/React/**",
-					"$(SRCROOT)/../../gotlandskartan/app/node_modules/react-native/Libraries/Image",
 					"$(SRCROOT)/../../react-native/React/**",
 					"$(SRCROOT)/../../react-native/Libraries/Image",
 				);
@@ -298,8 +296,6 @@
 			buildSettings = {
 				DEVELOPMENT_TEAM = 5BEG6QJ94B;
 				HEADER_SEARCH_PATHS = (
-					"$(SRCROOT)/../../gotlandskartan/app/node_modules/react-native/React/**",
-					"$(SRCROOT)/../../gotlandskartan/app/node_modules/react-native/Libraries/Image",
 					"$(SRCROOT)/../../react-native/React/**",
 					"$(SRCROOT)/../../react-native/Libraries/Image",
 				);

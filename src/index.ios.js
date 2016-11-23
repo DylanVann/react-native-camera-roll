@@ -1,20 +1,20 @@
 import PhotosFramework from './ios'
 
-export const getDefaultAlbum = () =>
+const getDefaultAlbum = options =>
   PhotosFramework.getAlbums([{
     type: 'smartAlbum',
     subType: 'smartAlbumUserLibrary',
     previewAssets: 1,
-    prepareForSizeDisplay: this.getImageDimensions(),
     preCacheAssets: true,
     fetchOptions: {
       includeHiddenAssets: true,
       includeAllBurstAssets: false,
     },
+    ...options,
   }])
-  .then(res => this.album = res.albums[0])
+  .then(res => res.albums[0])
 
-export const getAlbums = options =>
+const getAlbums = options =>
   PhotosFramework.getAlbumsMany([
     {
       type: 'smartAlbum',
@@ -54,7 +54,7 @@ const extractAsset = asset => ({
   id: asset.localIdentifier,
 })
 
-export const getPhotos = (album, options) => {
+const getPhotos = (album, options) => {
   const allOptions = {
     startIndex: (options.after || 0),
     endIndex: (options.after || 0) + options.first,
@@ -72,4 +72,10 @@ export const getPhotos = (album, options) => {
     hasMore: data.assets.length === (options.endIndex - options.startIndex),
     assets: data.assets.map(extractAsset),
   }))
+}
+
+export default {
+  getDefaultAlbum,
+  getAlbums,
+  getPhotos,
 }

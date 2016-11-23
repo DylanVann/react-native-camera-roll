@@ -5,7 +5,7 @@ import Asset from './asset';
 import Album from './album';
 import AlbumQueryResult from './album-query-result';
 import AlbumQueryResultCollection from './album-query-result-collection';
-import EventEmitter from '../../react-native/Libraries/EventEmitter/EventEmitter';
+import EventEmitter from '../../../react-native/Libraries/EventEmitter/EventEmitter';
 const RCTCameraRollRNPhotosFrameworkManager = NativeModules.CameraRollRNPhotosFrameworkManager;
 export const eventEmitter = new EventEmitter();
 

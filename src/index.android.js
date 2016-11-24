@@ -10,10 +10,11 @@ const getAlbums = () =>
   .then(res => res.albums)
 
 const extractAsset = asset => ({
+  id: asset.id,
   uri: asset.uri,
+  source: asset.source,
   isVideo: asset.mediaType === 'video',
   timeStamp: asset.creationDate * 1000,
-  id: asset.id,
 })
 
 const getPhotos = (album, options) => {

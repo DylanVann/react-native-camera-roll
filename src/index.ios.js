@@ -48,10 +48,11 @@ const getAlbums = options =>
   })
 
 const extractAsset = asset => ({
+  id: asset.localIdentifier,
   uri: asset.uri,
+  source: asset.uri,
   isVideo: asset.mediaType === 'video',
   timeStamp: asset.creationDate * 1000,
-  id: asset.localIdentifier,
 })
 
 const getPhotos = (album, options) => {

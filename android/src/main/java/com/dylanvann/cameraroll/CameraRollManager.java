@@ -561,6 +561,7 @@ public class CameraRollManager extends ReactContextBaseJavaModule {
               Images.Media.EXTERNAL_CONTENT_URI,
               photos.getString(idIndex));
       asset.putString("uri", photoUri.toString());
+      asset.putString("source", photoUri.toString());
     }
 
     float width = photos.getInt(widthIndex);

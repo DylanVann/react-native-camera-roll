@@ -12,6 +12,6 @@
   "author": "Dylan Vann <dylanvann@gmail.com> (http://dylanvann.com)",
   "main": "index.js",
   "peerDependencies": {
-    "react-native": ">=v0.35.0"
+    "react-native": "^0.x"
   }
 }

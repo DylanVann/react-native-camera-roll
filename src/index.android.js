@@ -1,6 +1,6 @@
-import React from 'react-native'
+import { NativeModules } from 'react-native'
 
-const { CameraRoll } = React.NativeModules
+const { CameraRoll } = NativeModules
 
 // No default album needed for android.
 const getDefaultAlbum = () => Promise.resolve({})

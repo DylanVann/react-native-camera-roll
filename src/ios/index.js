@@ -1,6 +1,6 @@
 import ReactPropTypes from 'react/lib/ReactPropTypes';
 import {NativeAppEventEmitter} from 'react-native';
-import {NativeModules} from 'react-native';
+import { NativeModules } from 'react-native';
 import Asset from './asset';
 import Album from './album';
 import AlbumQueryResult from './album-query-result';

@@ -569,7 +569,7 @@ public class CameraRollManager extends ReactContextBaseJavaModule {
     String mediaType = isVideo ? "video" : "photo";
     asset.putDouble("width", width);
     asset.putDouble("height", height);
-    asset.putString("filename", photos.getString(photos.getColumnIndex(MediaStore.MediaColumns.DISPLAY_NAME)));
+    asset.putString("fileName", photos.getString(photos.getColumnIndex(MediaStore.MediaColumns.DISPLAY_NAME)));
     asset.putString("mimeType", photos.getString(mimeTypeIndex));
     asset.putString("mediaType", mediaType);
     asset.putDouble("creationDate", photos.getLong(dateAddedIndex));

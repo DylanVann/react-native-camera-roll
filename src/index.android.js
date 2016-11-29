@@ -15,6 +15,7 @@ const extractAsset = asset => ({
   source: asset.source,
   isVideo: asset.mediaType === 'video',
   timeStamp: asset.creationDate * 1000,
+  fileName: asset.fileName,
 })
 
 const getPhotos = (album, options) => {

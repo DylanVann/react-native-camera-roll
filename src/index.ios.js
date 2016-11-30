@@ -69,7 +69,7 @@ const getPhotos = (album, options) => {
   }
   return album.getAssets(allOptions)
   .then(data => ({
-    after: allOptions.endIndex,
+    after: allOptions.endIndex + 1,
     hasMore: data.assets.length === (options.first + 1),
     assets: data.assets.map(extractAsset),
   }))

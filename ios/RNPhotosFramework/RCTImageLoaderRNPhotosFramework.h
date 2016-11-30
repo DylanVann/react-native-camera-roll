@@ -3,4 +3,6 @@
 
 @interface RCTImageLoaderRNPhotosFramework : NSObject <RCTImageURLLoader>
 
+- (float) loaderPriority;
+
 @end

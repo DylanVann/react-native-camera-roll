@@ -136,4 +136,9 @@ RCT_EXPORT_MODULE()
     return queryItem.value;
 }
 
+- (float)loaderPriority
+{
+    return -1;
+}
+
 @end

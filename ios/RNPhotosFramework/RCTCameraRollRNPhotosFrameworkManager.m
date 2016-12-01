@@ -61,23 +61,32 @@ RCT_EXPORT_METHOD(getAssets:(NSDictionary *)params
                   reject:(RCTPromiseRejectBlock)reject)
 {
     RCT_PROFILE_BEGIN_EVENT(0, @"-[RCTCameraRollRNPhotosFrameworkManager getAssets", nil);
-    
+    NSLog(@"Gettings assetsFetchResult");
     PHFetchResult<PHAsset *> *assetsFetchResult = [PHAssetsService getAssetsForParams:params];
     
+    NSLog(@"Gettings params.");
     NSString *startIndexParam = params[@"startIndex"];
     NSString *endIndexParam = params[@"endIndex"];
     BOOL includeMetaData = [RCTConvert BOOL:params[@"includeMetaData"]];
     
+    NSLog(@"Converting params.");
     NSUInteger startIndex = [RCTConvert NSInteger:startIndexParam];
     NSUInteger endIndex = endIndexParam != nil ? [RCTConvert NSInteger:endIndexParam] : (assetsFetchResult.count -1);
     
+    NSLog(@"Gettings assets NSArray.");
     NSArray<PHAsset *> *assets = [PHAssetsService getAssetsForFetchResult:assetsFetchResult startIndex:startIndex endIndex:endIndex];
+    NSLog(@"Preparing assets for display.");
     [self prepareAssetsForDisplayWithParams:params andAssets:assets];
+    NSLog(@"includesLastAsset");
     BOOL includesLastAsset = endIndex >= (assetsFetchResult.count -1);
+    NSLog(@"Creating assetsUriArray.");
+    NSArray<NSDictionary *> *assetsUriArray = [PHAssetsService assetsArrayToUriArray:assets andIncludeMetaData:includeMetaData];
+    NSLog(@"Resolving getAssets.");
     resolve(@{
-              @"assets" : [PHAssetsService assetsArrayToUriArray:assets andIncludeMetaData:includeMetaData],
+              @"assets" : assetsUriArray,
               @"includesLastAsset" : @(includesLastAsset)
               });
+    NSLog(@"Resolved getAssets.");
     RCT_PROFILE_END_EVENT(RCTProfileTagAlways, @"");
 }
 

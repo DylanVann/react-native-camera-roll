@@ -66,7 +66,8 @@
             [self extendAssetDicWithAssetMetaData:responseDict andPHAsset:asset];
         }
         
-        [uriArray addObject:responseDict];
+        if (!responseDict) NSLog(@"responseDict is nil at index: %d", i);
+        else [uriArray addObject:responseDict];
     }
     RCT_PROFILE_END_EVENT(RCTProfileTagAlways, @"");
 
@@ -98,7 +99,8 @@
     NSMutableArray<PHAsset *> *assets = [NSMutableArray new];
     [assetsFetchResult enumerateObjectsUsingBlock:^(PHAsset *asset, NSUInteger index, BOOL *stop) {
         if(index >= startIndex){
-            [assets addObject:asset];
+            if (!asset) NSLog(@"asset is nil at index: %lu", (unsigned long)index);
+            else [assets addObject:asset];
         }
         if(index >= endIndex){
             *stop = YES;
@@ -203,3 +205,4 @@
 }*/
 
 @end
+

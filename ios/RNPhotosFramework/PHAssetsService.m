@@ -78,15 +78,12 @@
     [dictToExtend setObject:@([PHHelpers getTimeSince1970:[asset creationDate]]) forKey:@"creationDate"];
     [dictToExtend setObject:@([PHHelpers getTimeSince1970:[asset modificationDate]])forKey:@"modificationDate"];
     [dictToExtend setObject:[PHHelpers CLLocationToJson:[asset location]] forKey:@"location"];
-    [dictToExtend setObject:[PHHelpers nsOptionsToArray:[asset mediaSubtypes] andBitSize:32 andReversedEnumDict:[RCTConvert PHAssetMediaSubtypeValuesReversed]] forKey:@"mediaSubTypes"];
     [dictToExtend setObject:@([asset isFavorite]) forKey:@"isFavorite"];
     [dictToExtend setObject:@([asset isHidden]) forKey:@"isHidden"];
-    [dictToExtend setObject:[PHHelpers nsOptionsToValue:[asset sourceType] andBitSize:32 andReversedEnumDict:[RCTConvert PHAssetSourceTypeValuesReversed]] forKey:@"sourceType"];
     NSString *burstIdentifier = [asset burstIdentifier];
     if(burstIdentifier != nil) {
         [dictToExtend setObject:burstIdentifier forKey:@"burstIdentifier"];
         [dictToExtend setObject:@([asset representsBurst]) forKey:@"representsBurst"];
-        [dictToExtend setObject:[PHHelpers nsOptionsToArray:[asset burstSelectionTypes] andBitSize:32 andReversedEnumDict:[RCTConvert PHAssetBurstSelectionTypeValuesReversed]] forKey:@"burstSelectionTypes"];
     }
     if([asset mediaType] == PHAssetMediaTypeVideo || [asset mediaType] == PHAssetMediaTypeAudio) {
         [dictToExtend setObject:@([asset duration]) forKey:@"duration"];

@@ -1,9 +1,9 @@
-#import "PHHelpers.h"
+#import "RNPFHelpers.h"
 #import <CoreLocation/CLLocation.h>
-#import "RCTConvert.h"
+#import <React/RCTConvert.h>
 #import "RCTConvert+RNPhotosFramework.h"
 
-@implementation PHHelpers
+@implementation RNPFHelpers
 
 +(NSDateFormatter *)getISODateFormatter {
     NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
@@ -15,7 +15,7 @@
 
 +(NSString *)NSDateToJsonString:(NSDate *)date andDateFormatter:(NSDateFormatter *)dateFormatter {
     if(date == nil) {
-        return [NSNull null];
+        return (NSString *)[NSNull null];
     }
     NSString *iso8601String = [dateFormatter stringFromDate:date];
     return iso8601String;
@@ -39,22 +39,23 @@
 }
 
 +(NSString *)convertEnumToStringValue:(int)type andValues:(NSDictionary *)values {
-    NSString *match = [[values allKeysForObject:[NSNumber numberWithInt:type]] firstObject];
     return [[values allKeysForObject:[NSNumber numberWithInt:type]] firstObject];
 }
 
-+(NSMutableArray*) nsOptionsToArray:(int)option andBitSize:(int)bitSize andReversedEnumDict:(NSDictionary *)dict
++(NSArray*) nsOptionsToArray:(int)option andBitSize:(int)bitSize andReversedEnumDict:(NSDictionary *)dict
 {
     if(option == 0){
-        NSString *zeroValue = [dict objectForKey:0];
-        return zeroValue ? [NSArray arrayWithObject:zeroValue] : [NSNull null];
+        NSString *zeroValue = [dict objectForKey:@(0)];
+        return zeroValue ? [NSArray arrayWithObject:zeroValue] : (NSMutableArray*)[NSNull null];
     }
     NSMutableArray * nsOptions = [[NSMutableArray alloc] init];
         for (NSUInteger i=0; i < bitSize; i++) {
         NSUInteger enumBitValueToCheck = 1UL << i;
-        if (option & enumBitValueToCheck) {
-            [nsOptions addObject:[dict objectForKey:@(enumBitValueToCheck)]];
-            
+        if ((option & enumBitValueToCheck)) {
+            NSObject *option = dict[@(enumBitValueToCheck)];
+            if (option) {
+                [nsOptions addObject:option];
+            }
         }
     }
     
@@ -64,8 +65,8 @@
 +(NSString*) nsOptionsToValue:(int)option andBitSize:(int)bitSize andReversedEnumDict:(NSDictionary *)dict
 {
     if(option == 0){
-        NSString *zeroValue = [dict objectForKey:0];
-        return zeroValue ? zeroValue : [NSNull null];
+        NSString *zeroValue = [dict objectForKey:@(0)];
+        return zeroValue ? zeroValue : (NSString*)[NSNull null];
     }
     for (NSUInteger i=0; i < bitSize; i++) {
         NSUInteger enumBitValueToCheck = 1UL << i;
@@ -75,7 +76,8 @@
         }
     }
     
-    return [NSNull null];
+    return (NSString*)[NSNull null];
 }
+
 
 @end

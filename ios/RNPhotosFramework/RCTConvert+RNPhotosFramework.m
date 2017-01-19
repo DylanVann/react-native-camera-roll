@@ -1,4 +1,4 @@
-#import "RCTConvert.h"
+#import <React/RCTConvert.h>
 #import "RCTConvert+RNPhotosFramework.h"
 #import "PHSaveAssetRequest.h"
 @import Photos;
@@ -38,21 +38,17 @@ RCT_ENUM_CONVERTER_WITH_REVERSED(PHAuthorizationStatus, (@{
 
 
 RCT_ENUM_CONVERTER_WITH_REVERSED(RNPFAssetCountType, (@{
-                                                        // New values
                                                         @"estimated": @(RNPFAssetCountTypeEstimated),
                                                         @"exact": @(RNPFAssetCountTypeExact)
                                                         }), RNPFAssetCountTypeEstimated, integerValue)
 
 RCT_ENUM_CONVERTER_WITH_REVERSED(PHAssetBurstSelectionType, (@{
-                                                        // New values
                                                         @"none": @(PHAssetBurstSelectionTypeNone),
                                                         @"autoPick": @(PHAssetBurstSelectionTypeAutoPick),
                                                         @"userPick": @(PHAssetBurstSelectionTypeUserPick)
                                                         }), PHAssetBurstSelectionTypeNone, integerValue)
 
 RCT_ENUM_CONVERTER_WITH_REVERSED(PHAssetMediaType, (@{
-                                        
-                                        // New values
                                         @"image": @(PHAssetMediaTypeImage),
                                         @"video": @(PHAssetMediaTypeVideo),
                                         @"audio": @(PHAssetMediaTypeAudio),
@@ -103,19 +99,32 @@ RCT_ENUM_CONVERTER_WITH_REVERSED(PHAssetCollectionSubtype, (@{
                                                 @"smartAlbumUserLibrary": @(PHAssetCollectionSubtypeSmartAlbumUserLibrary),
                                                 @"smartAlbumSelfPortraits": @(PHAssetCollectionSubtypeSmartAlbumSelfPortraits),
                                                 @"smartAlbumScreenshots": @(PHAssetCollectionSubtypeSmartAlbumScreenshots),
-                                                @"smartAlbumDepthEffect": @(PHAssetCollectionSubtypeSmartAlbumDepthEffect),
+                                                @"smartAlbumDepthEffect" : @(PHAssetCollectionSubtypeSmartAlbumDepthEffect)
                                                 
                                                 }), PHCollectionListSubtypeAny, integerValue)
 
 RCT_ENUM_CONVERTER_WITH_REVERSED(PHAssetSourceType, (@{
-                                         
-                                         // New values
                                          @"none": @(PHAssetSourceTypeNone),
                                          @"userLibrary": @(PHAssetSourceTypeUserLibrary),
                                          @"cloudShared": @(PHAssetSourceTypeCloudShared),
                                          @"itunesSynced": @(PHAssetSourceTypeiTunesSynced)
                                          
                                          }), PHAssetSourceTypeNone, integerValue)
+
+RCT_ENUM_CONVERTER_WITH_REVERSED(PHAssetResourceType, (@{
+                                                       @"photo": @(PHAssetResourceTypePhoto),
+                                                       @"video": @(PHAssetResourceTypeVideo),
+                                                       @"audio": @(PHAssetResourceTypeAudio),
+                                                       @"alternatePhoto": @(PHAssetResourceTypeAlternatePhoto),
+                                                       @"fullSizePhoto": @(PHAssetResourceTypeFullSizePhoto),
+                                                       @"fullSizeVideo": @(PHAssetResourceTypeFullSizeVideo),
+                                                       @"adjustmentData": @(PHAssetResourceTypeAdjustmentData),
+                                                       @"adjustmentBasePhoto": @(PHAssetResourceTypeAdjustmentBasePhoto),
+                                                       @"pairedVideo": @(PHAssetResourceTypePairedVideo),
+                                                       @"fullSizePairedVideo": @(PHAssetResourceTypeFullSizePairedVideo),
+                                                       @"adjustmentBasePairedVideo": @(PHAssetResourceTypeAdjustmentBasePairedVideo)
+                                                       
+                                                       }), PHAssetResourceTypePhoto, integerValue)
 
 + (NSArray<NSNumber *> *)PHAssetMediaTypes:(NSArray<NSString *> *)arrayWithMediaTypeStrings
 {
@@ -144,9 +153,9 @@ RCT_ENUM_CONVERTER_WITH_REVERSED(PHAssetSourceType, (@{
 
 +(int) PHAssetSourceTypes:(NSArray<NSString *> *)arrayWithSourceTypeStrings {
     if(arrayWithSourceTypeStrings.count == 0){
-        return nil;
+        return PHAssetSourceTypeNone;
     }
-    int sourceTypes;
+    int sourceTypes = 0;
     for(int i = 0; i < arrayWithSourceTypeStrings.count;i++) {
         PHAssetSourceType sourceType = [RCTConvert PHAssetSourceType:[arrayWithSourceTypeStrings objectAtIndex:i]];
         sourceTypes = sourceTypes | sourceType;
@@ -154,10 +163,19 @@ RCT_ENUM_CONVERTER_WITH_REVERSED(PHAssetSourceType, (@{
     return sourceTypes;
 }
 
++(PHSaveAsset *)PHSaveAsset:(id)json {
+    PHSaveAsset *asset = [PHSaveAsset new];
+    asset.uri = [RCTConvert NSString:json[@"uri"]];
+    asset.type = [RCTConvert NSString:json[@"type"]];
+    asset.isNetwork = [RCTConvert BOOL:json[@"isNetwork"]];
+    asset.isAsset = [RCTConvert BOOL:json[@"isAsset"]];
+    return asset;
+}
+
 +(PHSaveAssetRequest *)PHSaveAssetRequest:(id)json {
     PHSaveAssetRequest *assetRequest = [PHSaveAssetRequest new];
-    assetRequest.uri = [RCTConvert NSURLRequest:json[@"uri"]];
     assetRequest.type = [RCTConvert NSString:json[@"type"]];
+    assetRequest.source = [RCTConvert PHSaveAsset:json[@"source"]];
     return assetRequest;
 }
 
@@ -168,6 +186,40 @@ RCT_ENUM_CONVERTER_WITH_REVERSED(PHAssetSourceType, (@{
         [outputArray addObject:[self PHSaveAssetRequest:[inputArray objectAtIndex:i]]];
     }
     return outputArray;
+}
+
++ (CLLocation *)CLLocation:(id)json {
+    json = [self NSDictionary:json];
+    //Required:
+    double lat = [RCTConvert double:json[@"lat"]];
+    double lng = [RCTConvert double:json[@"lng"]];
+    
+    //Optional:
+    double altitude = 0;
+    NSString *altitudeValue = json[@"altitude"];
+    if(altitudeValue != nil) {
+        altitude = [RCTConvert double:altitudeValue];
+    }
+    
+    double course = 0;
+    NSString *courseValue = json[@"heading"];
+    if(courseValue != nil) {
+        course = [RCTConvert double:courseValue];
+    }
+    
+    double speed = 0;
+    NSString *speedValue = json[@"speed"];
+    if(speedValue != nil) {
+        speed = [RCTConvert double:speedValue];
+    }
+    
+    NSDate *timeStamp = [NSDate date];
+    NSString *timeStampValue = json[@"timeStamp"];
+    if(timeStampValue) {
+        timeStamp = [RCTConvert NSDate:timeStampValue];
+    }
+    
+    return [[CLLocation alloc] initWithCoordinate:CLLocationCoordinate2DMake(lat, lng) altitude:altitude horizontalAccuracy:0 verticalAccuracy:0 course:course speed:speed timestamp:timeStamp];
 }
 
 @end

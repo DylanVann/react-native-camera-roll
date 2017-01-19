@@ -1,7 +1,7 @@
 import PhotosFramework from './ios'
 
 const getDefaultAlbum = options =>
-  PhotosFramework.getAlbums([{
+  PhotosFramework.getAlbums({
     type: 'smartAlbum',
     subType: 'smartAlbumUserLibrary',
     previewAssets: 1,
@@ -11,7 +11,7 @@ const getDefaultAlbum = options =>
       includeAllBurstAssets: false,
     },
     ...options,
-  }])
+  })
   .then(res => res.albums[0])
 
 const getAlbums = options =>

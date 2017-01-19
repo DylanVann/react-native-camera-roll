@@ -1,11 +1,14 @@
 #import "PHFetchOptionsService.h"
-#import "RCTConvert.h"
+#import <React/RCTConvert.h>
 #import "RCTConvert+RNPhotosFramework.h"
 @import Photos;
 @implementation PHFetchOptionsService
 
 +(PHFetchOptions *)getCommonFetchOptionsFromParams:(NSDictionary *)params andFetchOptions:(PHFetchOptions *)options {
-    options.includeAssetSourceTypes = [RCTConvert PHAssetSourceTypes:params[@"sourceTypes"]];
+    if ([options respondsToSelector:@selector(includeAssetSourceTypes)]) {
+        // not available in iOS 8
+        options.includeAssetSourceTypes = [RCTConvert PHAssetSourceTypes:params[@"sourceTypes"]];
+    }
     options.includeHiddenAssets = [RCTConvert BOOL:params[@"includeHiddenAssets"]];
     options.includeAllBurstAssets = [RCTConvert BOOL:params[@"includeAllBurstAssets"]];
     options.fetchLimit = [RCTConvert int:params[@"fetchLimit"]];
@@ -26,9 +29,6 @@
     NSDictionary *params = [RCTConvert NSDictionary:outerParams[@"fetchOptions"]];
     PHFetchOptions *options = [[PHFetchOptions alloc] init];
     options = [self getCommonFetchOptionsFromParams:params andFetchOptions:options];
-    if(options.sortDescriptors == nil || options.sortDescriptors.count == 0) {
-        options.sortDescriptors = @[[NSSortDescriptor sortDescriptorWithKey:@"creationDate" ascending:NO]];
-    }
     return options;
 }
 
@@ -37,7 +37,6 @@
         return nil;
     }
     NSDictionary *params = [RCTConvert NSDictionary:outerParams[@"fetchOptions"]];
-    BOOL excludeEmptyAlbums = [RCTConvert BOOL:params[@"excludeEmptyAlbums"]];
     PHFetchOptions *options = [[PHFetchOptions alloc] init];
     options = [self getCommonFetchOptionsFromParams:params andFetchOptions:options];
     if(options.sortDescriptors == nil || options.sortDescriptors.count == 0) {
@@ -103,7 +102,7 @@
 }
 
 +(NSPredicate *) getMediaTypePredicate:(NSDictionary *)params {
-    NSMutableArray * mediaTypes = [RCTConvert PHAssetMediaTypes:params[@"mediaTypes"]];
+    NSArray<NSNumber *> * mediaTypes = [RCTConvert PHAssetMediaTypes:params[@"mediaTypes"]];
     if(mediaTypes == nil) {
         return nil;
     }

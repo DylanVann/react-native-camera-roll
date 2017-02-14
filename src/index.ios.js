@@ -59,7 +59,7 @@ const getPhotos = (album, options) => {
   const allOptions = {
     startIndex: (options.after || 0),
     endIndex: (options.after || 0) + options.first,
-    includeMetaData: true,
+    includeMetadata: true,
     includeHiddenAssets: true,
     fetchOptions: {
       includeHiddenAssets: true,

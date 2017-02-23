@@ -52,7 +52,7 @@ const extractAsset = asset => ({
   uri: asset.uri,
   source: asset.uri,
   isVideo: asset.mediaType === 'video',
-  timeStamp: asset.creationDate * 1000,
+  timeStamp: asset.creationDate,
 })
 
 const getPhotos = (album, options) => {

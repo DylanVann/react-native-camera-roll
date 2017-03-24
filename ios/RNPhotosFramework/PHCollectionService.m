@@ -143,6 +143,7 @@ static id ObjectOrNull(id object)
             //Some kind of undocumented value here for recentlyDeleted
             //Found references to this when i Googled.
             [albumDictionary setObject:@"recentlyDeleted" forKey:@"subType"];
+        }else if (subType == 213) { // TODO delete after RN update to 10.3 as subType 213 is not available
         }else {
             [albumDictionary setObject:[[RCTConvert PHAssetCollectionSubtypeValuesReversed] objectForKey:@(subType)] forKey:@"subType"];
         }
